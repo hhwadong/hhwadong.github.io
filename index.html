@@ -1,0 +1,1264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PTRX | 0xSTUDENT</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;800&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- 1. VARIABLES --- */
+        :root {
+            --bg-root: #050505;
+            --glass-surface: rgba(255, 255, 255, 0.03); 
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-border-hover: rgba(100, 102, 241, 0.4);
+            --accent: #6466F1;
+            --accent-glow: rgba(100, 102, 241, 0.2);
+            --text-main: #EDEDED;
+            --text-muted: #A1A1AA;
+            --code-bg: rgba(0, 0, 0, 0.3);
+            --code-green: #4ade80;
+            --code-red: #f87171;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            background-color: var(--bg-root);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* --- 2. BACKGROUND SYSTEM --- */
+        .cyber-grid {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2;
+            background-size: 40px 40px;
+            background-image: linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
+            pointer-events: none;
+        }
+        #pixel-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.6; image-rendering: pixelated; pointer-events: none; }
+
+        /* --- 3. SIDEBAR --- */
+        aside {
+            position: fixed; top: 24px; bottom: 24px; width: 260px; left: 24px;
+            background: var(--glass-surface); backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
+            border: 1px solid var(--glass-border); border-radius: 24px; padding: 2rem;
+            display: flex; flex-direction: column; z-index: 100;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateX(-100%);
+        }
+        body:not(.collapsed) aside { transform: translateX(0); }
+
+        .profile-name { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 0.9rem; display: flex; align-items: center; gap: 10px; color: white; }
+        .profile-icon { width: 28px; height: 28px; background: rgba(100,102,241,0.1); color: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border: 1px solid rgba(100,102,241,0.3); }
+        .role { font-size: 0.75rem; color: var(--text-muted); margin-left: 38px; margin-top: 4px; }
+        
+        nav { margin-top: 3rem; display: flex; flex-direction: column; gap: 4px; }
+        nav a { display: flex; align-items: center; color: var(--text-muted); text-decoration: none; padding: 10px 12px; border-radius: 8px; font-size: 0.9rem; font-family: 'JetBrains Mono', monospace; transition: all 0.2s; position: relative; overflow: hidden; }
+        nav a:hover { background: rgba(255,255,255,0.05); color: white; padding-left: 16px; }
+        nav a span { opacity: 0.5; margin-right: 12px; font-size: 0.75rem; width: 15px; }
+        nav a:hover span { opacity: 1; color: var(--accent); }
+
+        .status { margin-top: auto; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 12px; border: 1px solid var(--glass-border); font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
+        .dot { width: 6px; height: 6px; background: #22c55e; border-radius: 50%; box-shadow: 0 0 8px rgba(34,197,94,0.5); }
+
+        .toggle-btn {
+            position: absolute; right: -34px; top: 40px; width: 34px; height: 34px;
+            background: #000; border: 3px solid var(--accent); border-left: none; border-radius: 0 4px 4px 0;
+            color: var(--accent); font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 800;
+            display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 101;
+            box-shadow: 4px 4px 0px rgba(100, 102, 241, 0.4); image-rendering: pixelated; transition: all 0.1s;
+        }
+        .toggle-btn:hover { background: var(--accent); color: #000; transform: translate(2px, 2px); box-shadow: 2px 2px 0px rgba(255, 255, 255, 0.5); }
+
+        /* --- MAIN CONTENT --- */
+        main {
+            margin-left: 300px; flex: 1; max-width: 1200px;
+            transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        body.collapsed main { margin-left: 0; max-width: 100%; }
+
+        /* --- HERO --- */
+        .hero-section {
+            min-height: 100vh; 
+            display: flex; flex-direction: column; justify-content: center;
+            padding: 0 6rem; position: relative;
+        }
+        
+        .scroll-indicator {
+            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+            display: flex; flex-direction: column; align-items: center; gap: 10px;
+            opacity: 0.5; animation: bounce 2s infinite;
+        }
+        @keyframes bounce { 0%, 20%, 50%, 80%, 100% {transform: translateY(0) translateX(-50%);} 40% {transform: translateY(-10px) translateX(-50%);} 60% {transform: translateY(-5px) translateX(-50%);} }
+
+        h1 { font-family: 'JetBrains Mono', monospace; font-size: 4rem; line-height: 1.1; margin-bottom: 1.5rem; letter-spacing: -0.03em; }
+        .hero-text { font-size: 1.5rem; color: var(--text-muted); max-width: 700px; margin-bottom: 3rem; line-height: 1.6; }
+        .highlight { color: white; text-decoration: underline; text-decoration-color: rgba(100,102,241,0.5); text-underline-offset: 6px; }
+        
+        .btn-group { display: flex; gap: 1rem; }
+        .btn { 
+            padding: 0.8rem 1.6rem; border: 1px solid var(--glass-border); border-radius: 8px; 
+            background: var(--glass-surface); color: var(--text-main); text-decoration: none; 
+            font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; transition: 0.3s; 
+            backdrop-filter: blur(40px); 
+        }
+        .btn:hover { border-color: var(--accent); background: var(--accent-glow); transform: translateY(-2px); }
+
+        .content-section { padding: 6rem 6rem; border-top: 1px solid var(--glass-border); }
+        h2 { font-family: 'JetBrains Mono', monospace; font-size: 1.8rem; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--glass-border); display: flex; align-items: center; gap: 10px; }
+        .hash { color: var(--accent); }
+
+        .filter-bar { display: flex; gap: 10px; margin-bottom: 2rem; flex-wrap: wrap; }
+        .filter-btn {
+            background: transparent; border: 1px solid var(--glass-border); color: var(--text-muted);
+            padding: 6px 16px; border-radius: 20px; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;
+            cursor: pointer; transition: 0.2s;
+        }
+        .filter-btn:hover, .filter-btn.active { border-color: var(--accent); color: white; background: var(--accent-dim); }
+
+        /* --- CARD GRID (MODIFIED) --- */
+        .grid { 
+            display: grid; 
+            /* FIX: auto-fill + minmax memastikan kotak gak melar jadi persegi panjang */
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); 
+            gap: 2rem; 
+        }
+        
+        .card {
+            background: var(--glass-surface); backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
+            border: 1px solid var(--glass-border); border-radius: 16px; padding: 2rem;
+            transition: all 0.3s ease; text-decoration: none; display: flex; flex-direction: column;
+            
+            /* FIX: Aspect Ratio biar card-nya 'Boxy' */
+            aspect-ratio: 1 / 1; 
+            position: relative; 
+            overflow: hidden;
+        }
+        
+        .card.hidden { display: none; } 
+
+        .card:hover { border-color: var(--glass-border-hover); box-shadow: 0 0 30px -5px var(--accent-glow); transform: translateY(-4px); background: rgba(255, 255, 255, 0.05); }
+        
+        /* FIX: Card Image Style */
+        .card-bg-img {
+            position: absolute;
+            bottom: -10px; right: -10px;
+            width: 140px; height: 140px;
+            object-fit: contain;
+            opacity: 0.3; /* Samar */
+            filter: grayscale(100%);
+            /* Masking biar smooth */
+            mask-image: linear-gradient(to top left, black 50%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to top left, black 50%, transparent 100%);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* Hover Image Effect */
+        .card:hover .card-bg-img {
+            opacity: 0.8;
+            filter: grayscale(0%);
+            transform: scale(1.2) rotate(-10deg);
+            bottom: 10px; right: 10px;
+        }
+
+        .card-top, .card p, .tags { position: relative; z-index: 1; }
+        .card-top { display: flex; justify-content: space-between; margin-bottom: 1rem; align-items: start; }
+        .card-title { color: white; font-weight: 700; font-size: 1.2rem; }
+        .card-target { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--text-muted); background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 6px; border: 1px solid var(--glass-border); white-space: nowrap; }
+        .card p { color: var(--text-muted); font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem; flex: 1; }
+        .tags { display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; }
+        .tag { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--accent); background: var(--accent-dim); padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(100,102,241,0.2); }
+
+        /* IDE Style */
+        .ide-container { border: 1px solid var(--glass-border); border-radius: 16px; background: var(--code-bg); backdrop-filter: blur(40px); overflow: hidden; box-shadow: 0 20px 50px -10px rgba(0,0,0,0.5); }
+        .ide-header { background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--glass-border); padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .ide-dots { display: flex; gap: 6px; } .ide-dot { width: 12px; height: 12px; border-radius: 50%; background: #333; }
+        .ide-body { display: flex; height: 300px; }
+        .pane-code { flex: 1; padding: 30px; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; color: #a9b7c6; display: flex; flex-direction: column; justify-content: center; }
+        .line { display: flex; gap: 20px; margin-bottom: 8px; opacity: 0.7; transition: 0.2s; } .line.active { opacity: 1; }
+        .addr { color: #555; width: 80px; } .asm { color: #cc7832; font-weight: bold; } .val { color: #a9b7c6; }
+        .patch-btn-container { margin-top: 20px; }
+        .patch-trigger { background: rgba(100, 102, 241, 0.1); border: 1px solid var(--accent); color: var(--accent); padding: 8px 16px; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; cursor: pointer; transition: 0.2s; }
+        .patch-trigger:hover { background: var(--accent); color: white; }
+        .pane-result { flex: 1; border-left: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: center; flex-direction: column; background: rgba(0,0,0,0.2); }
+        .status-box { padding: 20px 40px; border-radius: 12px; text-align: center; border: 2px solid; transition: 0.3s; }
+        .locked { border-color: var(--code-red); background: rgba(248, 113, 113, 0.1); color: var(--code-red); }
+        .unlocked { border-color: var(--code-green); background: rgba(74, 222, 128, 0.1); color: var(--code-green); }
+        .status-text { font-family: 'JetBrains Mono', monospace; font-weight: bold; font-size: 1.2rem; }
+        
+        /* --- LAB STYLES --- */
+        .lab-tabs {
+            display: flex; gap: 8px; margin-bottom: 2rem;
+            overflow-x: auto; padding-bottom: 10px;
+            scrollbar-width: thin; scrollbar-color: var(--glass-border) transparent;
+        }
+        .lab-tabs::-webkit-scrollbar { height: 4px; }
+        .lab-tabs::-webkit-scrollbar-track { background: transparent; }
+        .lab-tabs::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 2px; }
+        
+        .tab-btn {
+            background: transparent; border: 1px solid var(--glass-border); color: var(--text-muted);
+            padding: 8px 16px; border-radius: 8px; font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem; cursor: pointer; transition: all 0.2s; white-space: nowrap;
+        }
+        .tab-btn:hover { border-color: var(--accent); color: white; }
+        .tab-btn.active { background: var(--accent-glow); border-color: var(--accent); color: white; }
+        
+        .lab-container { position: relative; }
+        .lab-scenario { display: none; }
+        .lab-scenario.active { display: block; }
+        
+        .scenario-header {
+            margin-bottom: 1.5rem; padding: 1.5rem; background: var(--glass-surface);
+            border: 1px solid var(--glass-border); border-radius: 12px;
+        }
+        .scenario-header h3 { font-family: 'JetBrains Mono', monospace; font-size: 1.2rem; margin-bottom: 0.5rem; color: var(--accent); }
+        .scenario-header p { color: var(--text-muted); font-size: 0.9rem; }
+        
+        .line.clickable { cursor: pointer; transition: all 0.2s; border-radius: 4px; }
+        .line.clickable:hover { background: rgba(100, 102, 241, 0.1); }
+        .line.patched { background: rgba(34, 197, 94, 0.1); }
+        .line.failed { background: rgba(248, 113, 113, 0.1); }
+        
+        .hint-text {
+            margin-top: 1rem; padding: 12px; background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--glass-border); border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--text-muted);
+            text-align: center;
+        }
+        
+        /* Context Menu */
+        .context-menu {
+            position: absolute; background: var(--glass-surface); backdrop-filter: blur(40px);
+            border: 1px solid var(--glass-border); border-radius: 8px; padding: 8px 0;
+            min-width: 180px; z-index: 1000; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .context-menu-item {
+            padding: 10px 16px; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;
+            color: var(--text-main); cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 8px;
+        }
+        .context-menu-item:hover { background: var(--accent-glow); color: white; }
+        .context-menu-item .icon { width: 16px; text-align: center; opacity: 0.7; }
+        
+        /* Patch Options */
+        .patch-option { color: #4ade80; }
+        .restore-option { color: #fbbf24; }
+        .fail-option { color: #f87171; }
+        
+        /* Success/Fail Animations */
+        @keyframes success-pulse {
+            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+        @keyframes fail-shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+        .success-animation { animation: success-pulse 1s; }
+        .fail-animation { animation: fail-shake 0.5s; }
+        
+        /* --- CONSOLE STYLES --- */
+        .console-window {
+            position: fixed; bottom: 24px; right: 24px; width: 400px; height: 300px;
+            background: var(--glass-surface); backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
+            border: 1px solid var(--glass-border); border-radius: 12px;
+            display: flex; flex-direction: column; z-index: 100;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .console-window.minimized { height: 40px; }
+        .console-header {
+            background: rgba(0,0,0,0.3); border-bottom: 1px solid var(--glass-border);
+            padding: 8px 12px; display: flex; justify-content: space-between; align-items: center;
+            border-radius: 12px 12px 0 0;
+        }
+        .console-tabs {
+            display: flex; gap: 4px;
+        }
+        .console-tab {
+            background: transparent; border: 1px solid var(--glass-border); color: var(--text-muted);
+            padding: 4px 8px; border-radius: 4px; font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem; cursor: pointer; transition: 0.2s;
+        }
+        .console-tab:hover { border-color: var(--accent); color: white; }
+        .console-tab.active { background: var(--accent-glow); border-color: var(--accent); color: white; }
+        .console-controls {
+            display: flex; gap: 4px;
+        }
+        .console-btn {
+            background: transparent; border: 1px solid var(--glass-border); color: var(--text-muted);
+            padding: 4px 8px; border-radius: 4px; font-family: 'JetBrains Mono', monospace;
+            font-size: 0.6rem; cursor: pointer; transition: 0.2s;
+        }
+        .console-btn:hover { border-color: var(--accent); color: white; }
+        .console-body {
+            flex: 1; padding: 12px; overflow-y: auto; display: none;
+        }
+        .console-body.active { display: block; }
+        .console-tab-content { display: none; }
+        .console-tab-content.active { display: block; }
+        .console-output {
+            font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--text-main);
+            height: 180px; overflow-y: auto; padding: 8px; background: rgba(0,0,0,0.2);
+            border-radius: 6px; border: 1px solid var(--glass-border);
+        }
+        .console-line {
+            margin-bottom: 4px; padding: 2px 0; word-wrap: break-word;
+        }
+        .console-line.system { color: var(--accent); }
+        .console-line.success { color: var(--code-green); }
+        .console-line.error { color: var(--code-red); }
+        .console-line.info { color: var(--text-muted); }
+        .console-input-container {
+            display: flex; align-items: center; padding: 8px; border-top: 1px solid var(--glass-border);
+            background: rgba(0,0,0,0.1);
+        }
+        .console-prompt {
+            color: var(--accent); font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; margin-right: 8px;
+        }
+        .console-input {
+            flex: 1; background: transparent; border: none; color: var(--text-main);
+            font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; outline: none;
+        }
+        .console-input::placeholder { color: var(--text-muted); }
+
+        @media (max-width: 900px) {
+            aside { transform: translateX(-100%); } main { margin-left: 0; padding: 2rem; }
+            .hero-section, .content-section { padding: 4rem 2rem; }
+            .hero-section { padding-top: 6rem; }
+            .ide-body { flex-direction: column; height: auto; } .pane-result { border-left: none; border-top: 1px solid var(--glass-border); padding: 40px; }
+            body.mobile-open aside { transform: translateX(0); }
+            body.mobile-open::after { content: ''; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 90; backdrop-filter: blur(2px); }
+            .lab-tabs { flex-wrap: nowrap; overflow-x: scroll; -webkit-overflow-scrolling: touch; }
+        }
+    </style>
+</head>
+
+<body class="collapsed">
+
+    <div class="cyber-grid"></div>
+    <canvas id="pixel-canvas"></canvas>
+    
+    <!-- Context Menu -->
+    <div class="context-menu" id="context-menu">
+        <div class="context-menu-item patch-option" onclick="patchInstruction('nop')">
+            <span class="icon">▶</span> Patch to NOP
+        </div>
+        <div class="context-menu-item patch-option" onclick="patchInstruction('mov_true')">
+            <span class="icon">✓</span> Patch to MOV TRUE
+        </div>
+        <div class="context-menu-item patch-option" onclick="patchInstruction('mov_false')">
+            <span class="icon">✗</span> Patch to MOV FALSE
+        </div>
+        <div class="context-menu-item patch-option" onclick="patchInstruction('jump')">
+            <span class="icon">↗</span> Always Jump
+        </div>
+        <div class="context-menu-item patch-option" onclick="patchInstruction('no_jump')">
+            <span class="icon">⊘</span> Remove Jump
+        </div>
+        <div class="context-menu-item patch-option" onclick="patchInstruction('invert')">
+            <span class="icon">⇄</span> Invert Condition
+        </div>
+        <div class="context-menu-item fail-option" onclick="patchInstruction('fail')">
+            <span class="icon">💥</span> Crash Program
+        </div>
+        <div class="context-menu-item restore-option" onclick="patchInstruction('restore')">
+            <span class="icon">↺</span> Restore Original
+        </div>
+    </div>
+
+    <aside id="sidebar">
+        <div class="toggle-btn" onclick="toggleSidebar()" id="toggle-icon">&gt;</div>
+        <div class="profile">
+            <div class="profile-name"><div class="profile-icon">>_</div> hhwadong</div>
+            <div class="role">CS Student</div>
+        </div>
+        <nav>
+            <a href="#home"><span>/</span>Home</a>
+            <a href="#demo"><span>#</span>Playground</a>
+            <a href="#research"><span>%</span>Research</a>
+            <a href="cv.pdf" target="_blank"><span>@</span>Resume</a>
+            <a href="https://github.com/hhwadong" target="_blank"><span>G</span>GitHub</a>
+        </nav>
+        <div class="status"><div class="dot"></div>System Online</div>
+    </aside>
+
+    <main>
+        <div id="home" class="hero-section">
+            <h1>Yusuf Putra R.</h1>
+            <p class="hero-text">
+                Computer Science Student building a foundation in <span class="highlight">Low-Level Security</span>.
+                Bridging academic theory with practical research in Reverse Engineering & Binary Patching.
+            </p>
+            <div class="btn-group">
+                <a href="mailto:yusuf.ramadhan@binus.ac.id" class="btn">Email Me</a>
+                <a href="#research" class="btn">View Projects</a>
+            </div>
+            <a href="#demo" class="scroll-indicator" style="text-decoration:none; color:var(--text-muted);">
+                <span style="font-family:'JetBrains Mono'; font-size:0.8rem;">SCROLL_DOWN</span>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 13l5 5 5-5M7 6l5 5 5-5"/></svg>
+            </a>
+        </div>
+
+        <div id="demo" class="content-section">
+            <h2><span class="hash">#</span> Reverse Engineering Lab</h2>
+            
+            <!-- Tab Navigation -->
+            <div class="lab-tabs">
+                <button class="tab-btn active" onclick="switchTab(0, this)">Authentication Bypass</button>
+                <button class="tab-btn" onclick="switchTab(1, this)">License Check</button>
+                <button class="tab-btn" onclick="switchTab(2, this)">Timer Crack</button>
+                <button class="tab-btn" onclick="switchTab(3, this)">Flag Validation</button>
+                <button class="tab-btn" onclick="switchTab(4, this)">Anti-Debug</button>
+                <button class="tab-btn" onclick="switchTab(5, this)">Checksum Bypass</button>
+                <button class="tab-btn" onclick="switchTab(6, this)">Crypto Weakness</button>
+            </div>
+
+            <!-- Lab Container -->
+            <div class="lab-container">
+                <!-- Scenario 1: Authentication Bypass -->
+                <div class="lab-scenario active" id="scenario-0">
+                    <div class="scenario-header">
+                        <h3>Scenario 1: Authentication Bypass</h3>
+                        <p>Patch the conditional jump to bypass authentication check</p>
+                    </div>
+                    <div class="ide-container">
+                        <div class="ide-header">
+                            <div class="ide-dots"><div class="ide-dot" style="background:#ff5f56"></div><div class="ide-dot" style="background:#ffbd2e"></div><div class="ide-dot" style="background:#27c93f"></div></div>
+                            <span style="font-family:'JetBrains Mono'; font-size:0.8rem; color:#666">auth_check.asm</span>
+                            <div></div>
+                        </div>
+                        <div class="ide-body">
+                            <div class="pane-code">
+                                <div class="line clickable" id="line-0-0" data-scenario="0" data-instruction="0">
+                                    <span class="addr">0x1000</span> <span class="asm">CMP</span> <span class="val">W0, #1</span></div>
+                                <div class="line active clickable" id="line-0-1" data-scenario="0" data-instruction="1">
+                                    <span class="addr">0x1004</span>
+                                    <span class="asm">B.NE</span>
+                                    <span class="val">loc_fail</span>
+                                    <span style="color:#666; margin-left:10px;">; Jump if not 1</span>
+                                </div>
+                                <div class="line clickable" id="line-0-2" data-scenario="0" data-instruction="2">
+                                    <span class="addr">0x1008</span> <span class="asm">MOV</span> <span class="val">X0, #1</span></div>
+                                <div class="line clickable" id="line-0-3" data-scenario="0" data-instruction="3">
+                                    <span class="addr">0x100C</span> <span class="asm">RET</span></div>
+                            </div>
+                            <div class="pane-result">
+                                <div class="status-box locked" id="status-0">
+                                    <div class="status-text">ACCESS DENIED</div>
+                                </div>
+                                <div class="hint-text" id="hint-0">Patch the B.NE instruction to bypass authentication</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scenario 2: License Check -->
+                <div class="lab-scenario" id="scenario-1">
+                    <div class="scenario-header">
+                        <h3>Scenario 2: License Validation</h3>
+                        <p>Modify the license check to always return valid</p>
+                    </div>
+                    <div class="ide-container">
+                        <div class="ide-header">
+                            <div class="ide-dots"><div class="ide-dot" style="background:#ff5f56"></div><div class="ide-dot" style="background:#ffbd2e"></div><div class="ide-dot" style="background:#27c93f"></div></div>
+                            <span style="font-family:'JetBrains Mono'; font-size:0.8rem; color:#666">license_check.asm</span>
+                            <div></div>
+                        </div>
+                        <div class="ide-body">
+                            <div class="pane-code">
+                                <div class="line clickable" id="line-1-0" data-scenario="1" data-instruction="0">
+                                    <span class="addr">0x2000</span> <span class="asm">LDR</span> <span class="val">X0, [X19, #8]</span></div>
+                                <div class="line clickable" id="line-1-1" data-scenario="1" data-instruction="1">
+                                    <span class="addr">0x2004</span>
+                                    <span class="asm">CBZ</span>
+                                    <span class="val">X0, loc_invalid</span>
+                                    <span style="color:#666; margin-left:10px;">; Jump if zero</span>
+                                </div>
+                                <div class="line clickable" id="line-1-2" data-scenario="1" data-instruction="2">
+                                    <span class="addr">0x2008</span> <span class="asm">MOV</span> <span class="val">W0, #0</span></div>
+                                <div class="line clickable" id="line-1-3" data-scenario="1" data-instruction="3">
+                                    <span class="addr">0x200C</span> <span class="asm">RET</span></div>
+                            </div>
+                            <div class="pane-result">
+                                <div class="status-box locked" id="status-1">
+                                    <div class="status-text">LICENSE INVALID</div>
+                                </div>
+                                <div class="hint-text" id="hint-1">Patch the CBZ or MOV instruction to validate license</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scenario 3: Timer Crack -->
+                <div class="lab-scenario" id="scenario-2">
+                    <div class="scenario-header">
+                        <h3>Scenario 3: Timer Expiration</h3>
+                        <p>Disable the timer check to extend trial period</p>
+                    </div>
+                    <div class="ide-container">
+                        <div class="ide-header">
+                            <div class="ide-dots"><div class="ide-dot" style="background:#ff5f56"></div><div class="ide-dot" style="background:#ffbd2e"></div><div class="ide-dot" style="background:#27c93f"></div></div>
+                            <span style="font-family:'JetBrains Mono'; font-size:0.8rem; color:#666">timer_check.asm</span>
+                            <div></div>
+                        </div>
+                        <div class="ide-body">
+                            <div class="pane-code">
+                                <div class="line clickable" id="line-2-0" data-scenario="2" data-instruction="0">
+                                    <span class="addr">0x3000</span> <span class="asm">BL</span> <span class="val">time</span></div>
+                                <div class="line clickable" id="line-2-1" data-scenario="2" data-instruction="1">
+                                    <span class="addr">0x3004</span>
+                                    <span class="asm">SUBS</span>
+                                    <span class="val">X0, X0, X1</span>
+                                    <span style="color:#666; margin-left:10px;">; Compare time</span>
+                                </div>
+                                <div class="line clickable" id="line-2-2" data-scenario="2" data-instruction="2">
+                                    <span class="addr">0x3008</span>
+                                    <span class="asm">B.LT</span>
+                                    <span class="val">loc_expired</span>
+                                    <span style="color:#666; margin-left:10px;">; Jump if expired</span>
+                                </div>
+                                <div class="line clickable" id="line-2-3" data-scenario="2" data-instruction="3">
+                                    <span class="addr">0x300C</span> <span class="asm">MOV</span> <span class="val">W0, #1</span></div>
+                            </div>
+                            <div class="pane-result">
+                                <div class="status-box locked" id="status-2">
+                                    <div class="status-text">TRIAL EXPIRED</div>
+                                </div>
+                                <div class="hint-text" id="hint-2">Patch the B.LT instruction to bypass timer check</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scenario 4: Flag Validation -->
+                <div class="lab-scenario" id="scenario-3">
+                    <div class="scenario-header">
+                        <h3>Scenario 4: Flag Validation</h3>
+                        <p>Modify the flag comparison to accept any input</p>
+                    </div>
+                    <div class="ide-container">
+                        <div class="ide-header">
+                            <div class="ide-dots"><div class="ide-dot" style="background:#ff5f56"></div><div class="ide-dot" style="background:#ffbd2e"></div><div class="ide-dot" style="background:#27c93f"></div></div>
+                            <span style="font-family:'JetBrains Mono'; font-size:0.8rem; color:#666">flag_check.asm</span>
+                            <div></div>
+                        </div>
+                        <div class="ide-body">
+                            <div class="pane-code">
+                                <div class="line clickable" id="line-3-0" data-scenario="3" data-instruction="0">
+                                    <span class="addr">0x4000</span> <span class="asm">LDR</span> <span class="val">X0, [SP]</span></div>
+                                <div class="line clickable" id="line-3-1" data-scenario="3" data-instruction="1">
+                                    <span class="addr">0x4004</span>
+                                    <span class="asm">CMP</span>
+                                    <span class="val">X0, #0x1337</span>
+                                    <span style="color:#666; margin-left:10px;">; Compare flag</span>
+                                </div>
+                                <div class="line clickable" id="line-3-2" data-scenario="3" data-instruction="2">
+                                    <span class="addr">0x4008</span>
+                                    <span class="asm">B.EQ</span>
+                                    <span class="val">loc_success</span>
+                                    <span style="color:#666; margin-left:10px;">; Jump if match</span>
+                                </div>
+                                <div class="line clickable" id="line-3-3" data-scenario="3" data-instruction="3">
+                                    <span class="addr">0x400C</span> <span class="asm">MOV</span> <span class="val">W0, #0</span></div>
+                            </div>
+                            <div class="pane-result">
+                                <div class="status-box locked" id="status-3">
+                                    <div class="status-text">FLAG INCORRECT</div>
+                                </div>
+                                <div class="hint-text" id="hint-3">Patch the CMP or B.EQ instruction to accept any flag</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scenario 5: Anti-Debug -->
+                <div class="lab-scenario" id="scenario-4">
+                    <div class="scenario-header">
+                        <h3>Scenario 5: Anti-Debug Protection</h3>
+                        <p>Bypass the anti-debugging check to allow debugging</p>
+                    </div>
+                    <div class="ide-container">
+                        <div class="ide-header">
+                            <div class="ide-dots"><div class="ide-dot" style="background:#ff5f56"></div><div class="ide-dot" style="background:#ffbd2e"></div><div class="ide-dot" style="background:#27c93f"></div></div>
+                            <span style="font-family:'JetBrains Mono'; font-size:0.8rem; color:#666">anti_debug.asm</span>
+                            <div></div>
+                        </div>
+                        <div class="ide-body">
+                            <div class="pane-code">
+                                <div class="line clickable" id="line-4-0" data-scenario="4" data-instruction="0">
+                                    <span class="addr">0x5000</span> <span class="asm">MOV</span> <span class="val">X0, #0</span></div>
+                                <div class="line clickable" id="line-4-1" data-scenario="4" data-instruction="1">
+                                    <span class="addr">0x5004</span>
+                                    <span class="asm">PTRACE</span>
+                                    <span class="val">PTRACE_TRACEME</span>
+                                    <span style="color:#666; margin-left:10px;">; Debug check</span>
+                                </div>
+                                <div class="line clickable" id="line-4-2" data-scenario="4" data-instruction="2">
+                                    <span class="addr">0x5008</span>
+                                    <span class="asm">CBNZ</span>
+                                    <span class="val">X0, loc_debug</span>
+                                    <span style="color:#666; margin-left:10px;">; Jump if debugged</span>
+                                </div>
+                                <div class="line clickable" id="line-4-3" data-scenario="4" data-instruction="3">
+                                    <span class="addr">0x500C</span> <span class="asm">RET</span></div>
+                            </div>
+                            <div class="pane-result">
+                                <div class="status-box locked" id="status-4">
+                                    <div class="status-text">DEBUG DETECTED</div>
+                                </div>
+                                <div class="hint-text" id="hint-4">Patch the CBNZ instruction to bypass anti-debug</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scenario 6: Checksum Bypass -->
+                <div class="lab-scenario" id="scenario-5">
+                    <div class="scenario-header">
+                        <h3>Scenario 6: Integrity Checksum</h3>
+                        <p>Bypass the integrity verification to modify code</p>
+                    </div>
+                    <div class="ide-container">
+                        <div class="ide-header">
+                            <div class="ide-dots"><div class="ide-dot" style="background:#ff5f56"></div><div class="ide-dot" style="background:#ffbd2e"></div><div class="ide-dot" style="background:#27c93f"></div></div>
+                            <span style="font-family:'JetBrains Mono'; font-size:0.8rem; color:#666">checksum.asm</span>
+                            <div></div>
+                        </div>
+                        <div class="ide-body">
+                            <div class="pane-code">
+                                <div class="line clickable" id="line-5-0" data-scenario="5" data-instruction="0">
+                                    <span class="addr">0x6000</span> <span class="asm">BL</span> <span class="val">calculate_crc</span></div>
+                                <div class="line clickable" id="line-5-1" data-scenario="5" data-instruction="1">
+                                    <span class="addr">0x6004</span>
+                                    <span class="asm">CMP</span>
+                                    <span class="val">W0, #0xDEADBEEF</span>
+                                    <span style="color:#666; margin-left:10px;">; Check checksum</span>
+                                </div>
+                                <div class="line clickable" id="line-5-2" data-scenario="5" data-instruction="2">
+                                    <span class="addr">0x6008</span>
+                                    <span class="asm">B.NE</span>
+                                    <span class="val">loc_corrupt</span>
+                                    <span style="color:#666; margin-left:10px;">; Jump if mismatch</span>
+                                </div>
+                                <div class="line clickable" id="line-5-3" data-scenario="5" data-instruction="3">
+                                    <span class="addr">0x600C</span> <span class="asm">RET</span></div>
+                            </div>
+                            <div class="pane-result">
+                                <div class="status-box locked" id="status-5">
+                                    <div class="status-text">INTEGRITY FAILED</div>
+                                </div>
+                                <div class="hint-text" id="hint-5">Patch the B.NE instruction to bypass checksum</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        
+                <!-- Console Window -->
+                <div class="console-window" id="console-window">
+                    <div class="console-header">
+                        <div class="console-tabs">
+                            <button class="console-tab active" onclick="switchConsoleTab('patching', this)">Patching Status</button>
+                            <button class="console-tab" onclick="switchConsoleTab('lldb', this)">LLDB Demo</button>
+                        </div>
+                        <div class="console-controls">
+                            <button class="console-btn" onclick="clearConsole()">Clear</button>
+                            <button class="console-btn" onclick="toggleConsole()">Minimize</button>
+                        </div>
+                    </div>
+                    <div class="console-body">
+                        <!-- Patching Status Tab -->
+                        <div class="console-tab-content active" id="patching-tab">
+                            <div class="console-output" id="patching-output">
+                                <div class="console-line system">[SYSTEM] Reverse Engineering Lab Console v1.0</div>
+                                <div class="console-line system">[SYSTEM] Ready for patching operations...</div>
+                            </div>
+                        </div>
+                        <!-- LLDB Demo Tab -->
+                        <div class="console-tab-content" id="lldb-tab">
+                            <div class="console-output" id="lldb-output">
+                                <div class="console-line system">[LLDB] Dynamic Analysis Interface</div>
+                                <div class="console-line system">[LLDB] Type 'help' for available commands</div>
+                            </div>
+                            <div class="console-input-container">
+                                <span class="console-prompt">(lldb)</span>
+                                <input type="text" class="console-input" id="lldb-input" placeholder="Enter LLDB command..." onkeypress="handleLLDBInput(event)">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scenario 7: Crypto Weakness -->
+                <div class="lab-scenario" id="scenario-6">
+                    <div class="scenario-header">
+                        <h3>Scenario 7: Cryptographic Weakness</h3>
+                        <p>Exploit weak encryption to bypass security</p>
+                    </div>
+                    <div class="ide-container">
+                        <div class="ide-header">
+                            <div class="ide-dots"><div class="ide-dot" style="background:#ff5f56"></div><div class="ide-dot" style="background:#ffbd2e"></div><div class="ide-dot" style="background:#27c93f"></div></div>
+                            <span style="font-family:'JetBrains Mono'; font-size:0.8rem; color:#666">crypto_check.asm</span>
+                            <div></div>
+                        </div>
+                        <div class="ide-body">
+                            <div class="pane-code">
+                                <div class="line clickable" id="line-6-0" data-scenario="6" data-instruction="0">
+                                    <span class="addr">0x7000</span> <span class="asm">BL</span> <span class="val">decrypt_data</span></div>
+                                <div class="line clickable" id="line-6-1" data-scenario="6" data-instruction="1">
+                                    <span class="addr">0x7004</span>
+                                    <span class="asm">TST</span>
+                                    <span class="val">W0, #0x1</span>
+                                    <span style="color:#666; margin-left:10px;">; Test decrypt flag</span>
+                                </div>
+                                <div class="line clickable" id="line-6-2" data-scenario="6" data-instruction="2">
+                                    <span class="addr">0x7008</span>
+                                    <span class="asm">B.EQ</span>
+                                    <span class="val">loc_fail</span>
+                                    <span style="color:#666; margin-left:10px;">; Jump if failed</span>
+                                </div>
+                                <div class="line clickable" id="line-6-3" data-scenario="6" data-instruction="3">
+                                    <span class="addr">0x700C</span> <span class="asm">MOV</span> <span class="val">W0, #1</span></div>
+                            </div>
+                            <div class="pane-result">
+                                <div class="status-box locked" id="status-6">
+                                    <div class="status-text">DECRYPT FAILED</div>
+                                </div>
+                                <div class="hint-text" id="hint-6">Patch the TST or B.EQ instruction to bypass crypto</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="research" class="content-section">
+            <h2><span class="hash">#</span> Selected Research</h2>
+            
+            <div class="filter-bar">
+                <button class="filter-btn active" onclick="filterProjects('all', this)">ALL</button>
+                <button class="filter-btn" onclick="filterProjects('arm', this)">ARM64</button>
+                <button class="filter-btn" onclick="filterProjects('x86', this)">x86</button>
+                <button class="filter-btn" onclick="filterProjects('net', this)">.NET</button>
+            </div>
+
+            <div class="grid">
+                <a href="focus-flight.html" class="card" data-tags="arm research">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg" class="card-bg-img" alt="Apple">
+                    
+                    <div class="card-top"><div class="card-title">macOS Binary Protection</div><div class="card-target">ARM64e</div></div>
+                    <p>Diagnosing SIGSEGV crashes caused by chained fixups corruption and bypassing PAC validation on M2 chips.</p>
+                    <div class="tags"><span class="tag">IDA Pro</span><span class="tag">Crash Analysis</span></div>
+                </a>
+
+                <a href="packet-tracer.html" class="card" data-tags="x86 patching">
+                    <img src="fm6.png" class="card-bg-img" alt="Cisco">
+
+                    <div class="card-top"><div class="card-title">Packet Tracer Bypass</div><div class="card-target">x86 Legacy</div></div>
+                    <p>Reverse engineering authentication flow and patching conditional jumps (JNE) to enable offline functionality.</p>
+                    <div class="tags"><span class="tag">Cutter</span><span class="tag">Binary Patching</span></div>
+                </a>
+
+                <a href="ultrakill.html" class="card" data-tags="net modding">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/1/19/Unity_Technologies_logo.svg" class="card-bg-img" alt="Unity">
+
+                    <div class="card-top"><div class="card-title">Ultrakill Instrumentation</div><div class="card-target">.NET / Unity</div></div>
+                    <p>Decompiled Unity assemblies to detour runtime methods and neutralize damage logic.</p>
+                    <div class="tags"><span class="tag">dnSpy</span><span class="tag">C#</span></div>
+                </a>
+
+                <a href="aoe2.html" class="card" data-tags="x86 unpacking">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/e/e0/Git-logo.svg" class="card-bg-img" alt="Binary">
+
+                    <div class="card-top"><div class="card-title">Age of Empires II</div><div class="card-target">x64</div></div>
+                    <p>Dynamic unpacking using process dumping to extract binary from memory and bypass integrity checks.</p>
+                    <div class="tags"><span class="tag">Scylla</span><span class="tag">Unpacking</span></div>
+                </a>
+            </div>
+        </div>
+
+        <footer style="margin-top: 2rem; padding: 2rem; text-align: center; color: var(--text-muted); font-size: 0.8rem; font-family: 'JetBrains Mono', monospace;">
+            <p>EOF // Yusuf Putra Ramadhan 2025</p>
+        </footer>
+    </main>
+
+    <script>
+        const canvas = document.getElementById('pixel-canvas');
+        const ctx = canvas.getContext('2d');
+        const scale = 4; let w, h;
+        
+        const instructions = [
+            "MOV R0, #1", "BL _func", "LDR X0, [SP]", "TBZ W0, #0", "RET", "SVC #0", "ADRP X8",
+            "MOV EAX, 1", "JMP 0x40", "POP EBP", "XOR EAX, EAX", "INT 3", "TEST EAX, EAX"
+        ];
+        let texts = [];
+
+        class FloatingText {
+            constructor() {
+                this.x = Math.random() * w; this.y = Math.random() * h + 50; 
+                this.text = instructions[Math.floor(Math.random() * instructions.length)];
+                this.speed = 0.1 + Math.random() * 0.2;
+                this.color = Math.random() > 0.5 ? '#4ade80' : '#60a5fa';
+                this.opacity = 0.3 + Math.random() * 0.5;
+            }
+            draw() {
+                if (this.y < -20) { this.y = h + 20; this.x = Math.random() * w; }
+                ctx.font = "10px monospace";
+                ctx.fillStyle = this.color; ctx.globalAlpha = this.opacity;
+                ctx.fillText(this.text, this.x, this.y); ctx.globalAlpha = 1.0;
+            }
+            update() { this.y -= this.speed; }
+        }
+
+        function init() {
+            w = Math.ceil(window.innerWidth / scale); h = Math.ceil(window.innerHeight / scale);
+            canvas.width = w; canvas.height = h; ctx.imageSmoothingEnabled = false;
+            texts = []; for(let i=0; i<25; i++) texts.push(new FloatingText());
+        }
+        function animate() { ctx.clearRect(0, 0, w, h); texts.forEach(t => { t.update(); t.draw(); }); requestAnimationFrame(animate); }
+        window.addEventListener('resize', init); init(); animate();
+
+        // --- SIDEBAR ---
+        function toggleSidebar() {
+            const body = document.body;
+            const btn = document.getElementById('toggle-icon');
+            const isMobile = window.innerWidth <= 900;
+            if (isMobile) {
+                body.classList.toggle('mobile-open');
+                btn.innerText = body.classList.contains('mobile-open') ? "<" : ">";
+            } else {
+                body.classList.toggle('collapsed');
+                btn.innerText = body.classList.contains('collapsed') ? ">" : "<";
+            }
+        }
+        window.addEventListener('load', () => {
+            if (window.innerWidth <= 900) document.getElementById('toggle-icon').innerText = ">";
+        });
+
+        // --- LAB FUNCTIONALITY ---
+        let currentScenario = 0;
+        let selectedLine = null;
+        let scenarioStates = {};
+        
+        // Initialize scenario states
+        for (let i = 0; i < 7; i++) {
+            scenarioStates[i] = {
+                patched: false,
+                success: false,
+                originalInstructions: {}
+            };
+        }
+        
+        // Tab switching
+        function switchTab(scenarioId, tabBtn) {
+            // Hide all scenarios
+            document.querySelectorAll('.lab-scenario').forEach(scenario => {
+                scenario.classList.remove('active');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected scenario
+            document.getElementById(`scenario-${scenarioId}`).classList.add('active');
+            tabBtn.classList.add('active');
+            
+            currentScenario = scenarioId;
+            hideContextMenu();
+        }
+        
+        // Context menu functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add click event listeners to all clickable lines
+            document.querySelectorAll('.line.clickable').forEach(line => {
+                line.addEventListener('contextmenu', function(e) {
+                    e.preventDefault();
+                    showContextMenu(e, this);
+                });
+                
+                line.addEventListener('click', function(e) {
+                    if (e.button === 0) { // Left click
+                        hideContextMenu();
+                    }
+                });
+            });
+            
+            // Hide context menu when clicking elsewhere
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.context-menu')) {
+                    hideContextMenu();
+                }
+            });
+        });
+        
+        function showContextMenu(e, lineElement) {
+            const contextMenu = document.getElementById('context-menu');
+            selectedLine = lineElement;
+            
+            // Position the context menu
+            contextMenu.style.left = e.pageX + 'px';
+            contextMenu.style.top = e.pageY + 'px';
+            contextMenu.style.display = 'block';
+            
+            // Store original instruction if not already stored
+            const scenarioId = lineElement.dataset.scenario;
+            const instructionId = lineElement.dataset.instruction;
+            
+            if (!scenarioStates[scenarioId].originalInstructions[instructionId]) {
+                const asmElement = lineElement.querySelector('.asm');
+                const valElement = lineElement.querySelector('.val');
+                scenarioStates[scenarioId].originalInstructions[instructionId] = {
+                    asm: asmElement.textContent,
+                    val: valElement.textContent,
+                    asmColor: asmElement.style.color || '#cc7832'
+                };
+            }
+        }
+        
+        function hideContextMenu() {
+            document.getElementById('context-menu').style.display = 'none';
+        }
+        
+        function patchInstruction(patchType) {
+            if (!selectedLine) return;
+            
+            const scenarioId = parseInt(selectedLine.dataset.scenario);
+            const instructionId = selectedLine.dataset.instruction;
+            const asmElement = selectedLine.querySelector('.asm');
+            const valElement = selectedLine.querySelector('.val');
+            const statusBox = document.getElementById(`status-${scenarioId}`);
+            const statusText = statusBox.querySelector('.status-text');
+            
+            // Clear previous states
+            selectedLine.classList.remove('patched', 'failed');
+            statusBox.classList.remove('success-animation', 'fail-animation');
+            
+            const original = scenarioStates[scenarioId].originalInstructions[instructionId];
+            
+            switch(patchType) {
+                case 'nop':
+                    asmElement.textContent = 'NOP';
+                    asmElement.style.color = '#50fa7b';
+                    valElement.textContent = '';
+                    selectedLine.classList.add('patched');
+                    break;
+                    
+                case 'mov_true':
+                    asmElement.textContent = 'MOV';
+                    asmElement.style.color = '#50fa7b';
+                    valElement.textContent = 'W0, #1';
+                    selectedLine.classList.add('patched');
+                    break;
+                    
+                case 'mov_false':
+                    asmElement.textContent = 'MOV';
+                    asmElement.style.color = '#50fa7b';
+                    valElement.textContent = 'W0, #0';
+                    selectedLine.classList.add('patched');
+                    break;
+                    
+                case 'jump':
+                    if (original.asm.includes('B.')) {
+                        // Modify existing jump instruction to always jump
+                        asmElement.textContent = 'B.AL';
+                        asmElement.style.color = '#50fa7b';
+                    } else {
+                        // Add new jump instruction
+                        asmElement.textContent = 'B.AL';
+                        asmElement.style.color = '#50fa7b';
+                        valElement.textContent = 'loc_success';
+                    }
+                    selectedLine.classList.add('patched');
+                    break;
+                    
+                case 'no_jump':
+                    if (original.asm.includes('B.')) {
+                        // Convert jump to NOP (no jump)
+                        asmElement.textContent = 'NOP';
+                        asmElement.style.color = '#50fa7b';
+                        valElement.textContent = '';
+                    }
+                    selectedLine.classList.add('patched');
+                    break;
+                    
+                case 'invert':
+                    if (original.asm.includes('B.NE')) {
+                        asmElement.textContent = 'B.EQ';
+                        asmElement.style.color = '#50fa7b';
+                    } else if (original.asm.includes('B.EQ')) {
+                        asmElement.textContent = 'B.NE';
+                        asmElement.style.color = '#50fa7b';
+                    } else if (original.asm.includes('CBZ')) {
+                        asmElement.textContent = 'CBNZ';
+                        asmElement.style.color = '#50fa7b';
+                    } else if (original.asm.includes('CBNZ')) {
+                        asmElement.textContent = 'CBZ';
+                        asmElement.style.color = '#50fa7b';
+                    } else if (original.asm.includes('B.LT')) {
+                        asmElement.textContent = 'B.GE';
+                        asmElement.style.color = '#50fa7b';
+                    } else if (original.asm.includes('B.GE')) {
+                        asmElement.textContent = 'B.LT';
+                        asmElement.style.color = '#50fa7b';
+                    }
+                    selectedLine.classList.add('patched');
+                    break;
+                    
+                case 'fail':
+                    // Intentionally wrong patch - crash program
+                    asmElement.textContent = 'B';
+                    asmElement.style.color = '#f87171';
+                    valElement.textContent = '0x0000';
+                    selectedLine.classList.add('failed');
+                    break;
+                    
+                case 'restore':
+                    asmElement.textContent = original.asm;
+                    asmElement.style.color = original.asmColor;
+                    valElement.textContent = original.val;
+                    break;
+            }
+            
+            checkScenarioSuccess(scenarioId);
+            
+            // Log to console
+            const scenarioNames = [
+                'Authentication Bypass', 'License Validation', 'Timer Expiration',
+                'Flag Validation', 'Anti-Debug Protection', 'Integrity Checksum', 'Cryptographic Weakness'
+            ];
+            
+            if (patchType !== 'restore') {
+                addConsoleMessage(`[PATCH] ${scenarioNames[scenarioId]} - Instruction ${instructionId} patched with ${patchType}`, 'success');
+            } else {
+                addConsoleMessage(`[RESTORE] ${scenarioNames[scenarioId]} - Instruction ${instructionId} restored to original`, 'info');
+            }
+            
+            hideContextMenu();
+        }
+        
+        function checkScenarioSuccess(scenarioId) {
+            const scenario = document.getElementById(`scenario-${scenarioId}`);
+            const patchedLines = scenario.querySelectorAll('.line.patched');
+            const failedLines = scenario.querySelectorAll('.line.failed');
+            
+            // Success if any instruction is patched and none failed
+            const success = patchedLines.length > 0 && failedLines.length === 0;
+            
+            scenarioStates[scenarioId].success = success;
+            updateScenarioStatus(scenarioId, success);
+        }
+        
+        function updateScenarioStatus(scenarioId, success) {
+            const statusBox = document.getElementById(`status-${scenarioId}`);
+            const statusText = statusBox.querySelector('.status-text');
+            
+            if (success) {
+                statusBox.className = 'status-box unlocked success-animation';
+                const successMessages = [
+                    'ACCESS GRANTED',
+                    'LICENSE VALID',
+                    'TRIAL EXTENDED',
+                    'FLAG ACCEPTED',
+                    'DEBUG DISABLED',
+                    'INTEGRITY PASSED',
+                    'DECRYPT SUCCESS'
+                ];
+                statusText.textContent = successMessages[scenarioId];
+            } else {
+                statusBox.className = 'status-box locked fail-animation';
+                const failMessages = [
+                    'ACCESS DENIED',
+                    'LICENSE INVALID',
+                    'TRIAL EXPIRED',
+                    'FLAG INCORRECT',
+                    'DEBUG DETECTED',
+                    'INTEGRITY FAILED',
+                    'DECRYPT FAILED'
+                ];
+                statusText.textContent = failMessages[scenarioId];
+            }
+        }
+
+        // --- FILTER ---
+        function filterProjects(tag, btn) {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const cards = document.querySelectorAll('.card');
+            cards.forEach(card => {
+                if (tag === 'all' || card.getAttribute('data-tags').includes(tag)) {
+                    card.classList.remove('hidden');
+                } else {
+                    card.classList.add('hidden');
+                }
+            });
+        }
+        
+        // --- CONSOLE FUNCTIONALITY ---
+        let consoleMinimized = false;
+        let currentConsoleTab = 'patching';
+        
+        function switchConsoleTab(tabName, tabBtn) {
+            // Remove active class from all tabs and contents
+            document.querySelectorAll('.console-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.console-tab-content').forEach(content => content.classList.remove('active'));
+            
+            // Add active class to selected tab and content
+            tabBtn.classList.add('active');
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            
+            currentConsoleTab = tabName;
+        }
+        
+        function clearConsole() {
+            const outputId = currentConsoleTab === 'patching' ? 'patching-output' : 'lldb-output';
+            const outputElement = document.getElementById(outputId);
+            outputElement.innerHTML = '';
+            
+            // Re-add header
+            if (currentConsoleTab === 'patching') {
+                outputElement.innerHTML = `
+                    <div class="console-line system">[SYSTEM] Reverse Engineering Lab Console v1.0</div>
+                    <div class="console-line system">[SYSTEM] Console cleared...</div>
+                `;
+            } else {
+                outputElement.innerHTML = `
+                    <div class="console-line system">[LLDB] Dynamic Analysis Interface</div>
+                    <div class="console-line system">[LLDB] Type 'help' for available commands</div>
+                `;
+            }
+        }
+        
+        function toggleConsole() {
+            const consoleWindow = document.getElementById('console-window');
+            consoleMinimized = !consoleMinimized;
+            
+            if (consoleMinimized) {
+                consoleWindow.classList.add('minimized');
+            } else {
+                consoleWindow.classList.remove('minimized');
+            }
+        }
+        
+        function addConsoleMessage(message, type = 'info') {
+            const outputId = currentConsoleTab === 'patching' ? 'patching-output' : 'lldb-output';
+            const outputElement = document.getElementById(outputId);
+            const messageLine = document.createElement('div');
+            messageLine.className = `console-line ${type}`;
+            messageLine.textContent = message;
+            outputElement.appendChild(messageLine);
+            
+            // Auto-scroll to bottom
+            outputElement.scrollTop = outputElement.scrollHeight;
+        }
+        
+        function handleLLDBInput(event) {
+            if (event.key === 'Enter') {
+                const input = document.getElementById('lldb-input');
+                const command = input.value.trim();
+                
+                if (command) {
+                    addConsoleMessage(`(lldb) ${command}`, 'info');
+                    processLLDBCommand(command);
+                    input.value = '';
+                }
+            }
+        }
+        
+        function processLLDBCommand(command) {
+            const parts = command.split(' ');
+            const cmd = parts[0].toLowerCase();
+            const args = parts.slice(1);
+            
+            switch(cmd) {
+                case 'help':
+                    addConsoleMessage('Available commands:', 'system');
+                    addConsoleMessage('  disassemble <address> - Show disassembly at address', 'info');
+                    addConsoleMessage('  memory read <addr> <size> - Read memory', 'info');
+                    addConsoleMessage('  register read <reg> - Read register value', 'info');
+                    addConsoleMessage('  breakpoint set <addr> - Set breakpoint', 'info');
+                    addConsoleMessage('  patch <addr> <instruction> - Patch instruction', 'info');
+                    addConsoleMessage('  continue - Continue execution', 'info');
+                    break;
+                    
+                case 'disassemble':
+                case 'dis':
+                    const addr = args[0] || '0x1000';
+                    addConsoleMessage(`Disassembling at ${addr}:`, 'system');
+                    addConsoleMessage(`  0x${parseInt(addr).toString(16).toUpperCase()}:  MOV W0, #1`, 'success');
+                    addConsoleMessage(`  0x${(parseInt(addr) + 4).toString(16).toUpperCase()}:  B.NE loc_fail`, 'info');
+                    break;
+                    
+                case 'memory':
+                case 'mem':
+                    if (args[0] === 'read' && args[1]) {
+                        const memAddr = args[1];
+                        const size = args[2] || '4';
+                        addConsoleMessage(`Reading ${size} bytes from ${memAddr}:`, 'system');
+                        addConsoleMessage(`  0x${Math.floor(Math.random() * 0xFFFFFFFF).toString(16).toUpperCase().padStart(8, '0')}`, 'success');
+                    }
+                    break;
+                    
+                case 'register':
+                case 'reg':
+                    if (args[0] === 'read' && args[1]) {
+                        const reg = args[1].toUpperCase();
+                        addConsoleMessage(`Reading register ${reg}:`, 'system');
+                        const values = { 'W0': '0x1', 'X0': '0x0', 'X1': '0x1337' };
+                        addConsoleMessage(`  ${reg} = ${values[reg] || '0x0'}`, 'success');
+                    }
+                    break;
+                    
+                case 'breakpoint':
+                case 'bp':
+                    if (args[0] === 'set' && args[1]) {
+                        const bpAddr = args[1];
+                        addConsoleMessage(`Setting breakpoint at ${bpAddr}:`, 'system');
+                        addConsoleMessage(`  Breakpoint set at 0x${bpAddr}`, 'success');
+                    }
+                    break;
+                    
+                case 'patch':
+                    if (args[0] && args[1]) {
+                        const patchAddr = args[0];
+                        const patchInst = args.slice(1).join(' ');
+                        addConsoleMessage(`Patching at ${patchAddr}:`, 'system');
+                        addConsoleMessage(`  Original: B.NE loc_fail`, 'info');
+                        addConsoleMessage(`  Patched: ${patchInst}`, 'success');
+                        addConsoleMessage(`  Patch applied successfully!`, 'success');
+                    }
+                    break;
+                    
+                case 'continue':
+                case 'c':
+                    addConsoleMessage('Continuing execution...', 'system');
+                    addConsoleMessage('  Process resumed', 'success');
+                    break;
+                    
+                default:
+                    addConsoleMessage(`Unknown command: ${cmd}`, 'error');
+                    addConsoleMessage('Type "help" for available commands', 'info');
+                    break;
+            }
+        }
+    </script>
+</body>
+</html>
